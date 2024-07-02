@@ -41,6 +41,11 @@ import java.util.UUID;
 @Configuration
 public class AuthorizationServerConfig {
 
+    /**
+     * AuthrozationServerConfig는 인증 서버 및 리소스 서버의 역할을 수행
+     * 토큰 및 클라이언트 관리
+     */
+
     @Bean
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
