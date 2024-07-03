@@ -1,3 +1,12 @@
+server:
+  port: 8080
 spring:
   application:
     name: inp-msa-auth
+  jpa:
+    properties:
+      hibernate.hibernate.format_sql: true
+  datasource:
+    url: ENC(5f21PvyE8z8mVbqJEATMmk4Edv9LL/9CbFLGMlaCIM+xZ/pTs9QdpC1Lx9oxCTrndF5Y8c9vqbL46hlLuR1Fge4Y6vDJOatRcLP4kbxIB6+dvNuorewtIi4nHJx2FPDp)
+    username: ENC(lRXvyM8WlO2s4LzJMX7ccA==)
+    password: ENC(ZRHk2x0/wj+aYoadPoK84trWb7TwQruX)
