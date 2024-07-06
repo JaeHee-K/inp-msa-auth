@@ -1,21 +1,18 @@
 package com.inp.msa.inpmsaauth.config;
 
-import com.inp.msa.inpmsaauth.util.SHA256PasswordEncoder;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Role;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -29,7 +26,6 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
@@ -40,24 +36,27 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.UUID;
 
 @Configuration
-public class AuthorizationServerConfig {
+@RequiredArgsConstructor
+public class SecurityAuthorizationServerConfig {
 
     /**
      * AuthrozationServerConfig는 인증 서버 및 리소스 서버의 역할을 수행
      * 토큰 및 클라이언트 관리
      */
 
+    private final PasswordEncoder passwordEncoder;
+
     @Bean
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+
+        SecurityCommonConfig.configureCommonSettings(http);
 
         http
                 .getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 .oidc(Customizer.withDefaults());
         http
-                .exceptionHandling((exceptions) -> exceptions
-                        .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
-                )
+                .csrf(AbstractHttpConfigurer::disable)
                 .oauth2ResourceServer((resourceServer) -> resourceServer
                         .jwt(Customizer.withDefaults()));
 
@@ -68,7 +67,7 @@ public class AuthorizationServerConfig {
     public RegisteredClientRepository registeredClientRepository() {
         RegisteredClient loginClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId("login-client")
-                .clientSecret(passwordEncoder().encode("openid-connect"))
+                .clientSecret(passwordEncoder.encode("openid-connect"))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
@@ -81,7 +80,7 @@ public class AuthorizationServerConfig {
 
         RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId("messaging-client")
-                .clientSecret(passwordEncoder().encode("secret"))
+                .clientSecret(passwordEncoder.encode("secret"))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
                 .scope("message:read")
@@ -113,22 +112,6 @@ public class AuthorizationServerConfig {
     @Bean
     public AuthorizationServerSettings providerSettings() {
         return AuthorizationServerSettings.builder().issuer("http://localhost:8080/inpmsaauth").build();
-    }
-
-    @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails userDetails = User.builder()
-                .username("user")
-                .password(passwordEncoder().encode("password"))
-                .roles("USER")
-                .build();
-
-        return new InMemoryUserDetailsManager(userDetails);
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new SHA256PasswordEncoder();
     }
 
     @Bean

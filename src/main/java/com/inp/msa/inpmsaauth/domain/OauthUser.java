@@ -21,6 +21,9 @@ public class OauthUser {
     @Column(name = "user_name")
     private String userName;
 
+    @Column(name = "user_account")
+    private String userAccount;
+
     @Column(name = "password")
     private String password;
 
