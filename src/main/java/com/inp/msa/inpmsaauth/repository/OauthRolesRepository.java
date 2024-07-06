@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface OauthRolesRepository extends JpaRepository<OauthRoles, Long> {
     OauthRoles findByRoleId(Long roleId);
+    OauthRoles findByRoleName(String roleName);
 }

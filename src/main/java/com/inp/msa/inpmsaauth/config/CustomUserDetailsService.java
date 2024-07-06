@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -18,8 +20,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     private final OauthUserRepository oauthUserRepository;
     private final OauthUserRolesRepository oauthUserRolesRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
+    @Transactional
     public UserDetails loadUserByUsername(String userAccount) throws UsernameNotFoundException {
         OauthUser oauthUser = oauthUserRepository.findByUserAccount(userAccount);
         if (oauthUser == null) {
@@ -28,5 +32,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         List<OauthUserRoles> oauthUserRoles = oauthUserRolesRepository.findByOauthUser(oauthUser);
         return new CustomUserDetails(oauthUser, oauthUserRoles);
+    }
+
+    public boolean validatePassword(OauthUser oauthUser, String rawPassword) {
+        String saltedPassword = rawPassword + oauthUser.getSalt();
+        return passwordEncoder.matches(saltedPassword, oauthUser.getPassword());
     }
 }
