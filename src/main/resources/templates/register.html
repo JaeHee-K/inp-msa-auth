@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Register</title>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('registerForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const userDto = {
+          username: document.getElementById('username').value,
+          account: document.getElementById('account').value,
+          password: document.getElementById('password').value,
+          confirmPassword: document.getElementById('confirmPassword').value
+        };
+
+        fetch('/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(userDto)
+        })
+                .then(response => {
+                  if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                  }
+                  return response.text();
+                })
+                .then(data => console.log(data))
+                .catch(error => console.error('Error:', error));
+      });
+    });
+  </script>
+</head>
+<body>
+<h1>Register</h1>
+<form id="registerForm">
+  <div>
+    <label for="account">Account:</label>
+    <input type="text" id="account" name="account" />
+  </div>
+  <div>
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" />
+  </div>
+  <div>
+    <label for="confirmPassword">Confirm Password:</label>
+    <input type="password" id="confirmPassword" name="confirmPassword" />
+  </div>
+  <div>
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username" />
+  </div>
+  <div>
+    <button type="submit">Register</button>
+  </div>
+</form>
+</body>
+</html>
