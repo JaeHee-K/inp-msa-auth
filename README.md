@@ -6,7 +6,7 @@
     <img src="https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=MySQL&logoColor=white" />
     <img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat&logo=Spring Boot&logoColor=white" />
     <img src="https://img.shields.io/badge/Spring Security-6DB33F?style=flat&logo=Spring Security&logoColor=white" />
-    <img src="https://img.shields.io/badge/Maven-1572B6?style=flat&logoColor=white" />
+    <img src="https://img.shields.io/badge/Gradle-1572B6?style=flat&logo=gradle&logoColor=white" />
     <img src="https://img.shields.io/badge/Thymeleaf-005F0F?style=flat&logo=Thymeleaf&logoColor=white" />
     <img src="https://img.shields.io/badge/IntelliJ IDEA-000000?style=flat&logo=IntelliJ IDEA&logoColor=white" />
 </div>
