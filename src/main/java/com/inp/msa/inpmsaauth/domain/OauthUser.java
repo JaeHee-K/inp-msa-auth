@@ -39,6 +39,6 @@ public class OauthUser {
     @Column(name = "delete_date")
     private LocalDateTime deleteDate;
 
-    @OneToMany(mappedBy = "oauthUser", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "oauthUser", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OauthUserRoles> oauthUser = new HashSet<>();
 }

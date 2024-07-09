@@ -1,15 +1,15 @@
 package com.inp.msa.inpmsaauth.config;
 
-import com.inp.msa.inpmsaauth.util.SHA256PasswordEncoder;
+import com.inp.msa.inpmsaauth.security.CustomAuthenticationProvider;
+import com.inp.msa.inpmsaauth.security.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
@@ -23,6 +23,8 @@ public class SecurityWebConfig {
      */
 
     private final CustomUserDetailsService customUserDetailsService;
+
+    private final CustomAuthenticationProvider customAuthenticationProvider;
 
     @Bean
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -49,8 +51,8 @@ public class SecurityWebConfig {
         return http.build();
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new SHA256PasswordEncoder();
+    @Autowired
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.authenticationProvider(customAuthenticationProvider);
     }
 }

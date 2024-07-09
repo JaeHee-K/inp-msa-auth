@@ -1,4 +1,4 @@
-package com.inp.msa.inpmsaauth.config;
+package com.inp.msa.inpmsaauth.security;
 
 import com.inp.msa.inpmsaauth.domain.OauthUser;
 import com.inp.msa.inpmsaauth.domain.OauthUserRoles;
@@ -35,7 +35,6 @@ public class CustomUserDetails implements UserDetails {
     public String getUsername() {
         return oauthUser.getUserAccount();
     }
-
 
     /**
      * To-Do Custom
