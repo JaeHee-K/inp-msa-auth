@@ -23,17 +23,17 @@ public class UserRegisterService {
     private final OauthRolesRepository oauthRolesRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public void save(UserRegisterRequestDto userRegisterRequestDto) {
+    public void save(UserRegisterRequestDto request) {
         // User
         OauthUser oauthUser = new OauthUser();
 
         String salt = SecurityUtil.generateSalt();
-        String saltedPassword = userRegisterRequestDto.getPassword() + salt;
+        String saltedPassword = request.getPassword() + salt;
 
         oauthUser.setUserId(SecurityUtil.generateUUID());
-        oauthUser.setUserAccount(userRegisterRequestDto.getAccount());
+        oauthUser.setUserAccount(request.getAccount());
         oauthUser.setPassword(passwordEncoder.encode(saltedPassword));
-        oauthUser.setUserName(userRegisterRequestDto.getUsername());
+        oauthUser.setUserName(request.getUsername());
         oauthUser.setSalt(salt);
         oauthUser.setCreateDate(LocalDateTime.now());
 

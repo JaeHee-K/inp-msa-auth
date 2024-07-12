@@ -33,7 +33,8 @@ public class SecurityWebConfig {
         http
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/resources/**").permitAll()
-                        .requestMatchers("login/**", "register", "oauth2/**", "authorized/**").permitAll()
+                        .requestMatchers("/login/**", "/user/register", "/oauth2/**", "/authorized/**").permitAll()
+                        .requestMatchers("/api/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(formLogin -> formLogin
