@@ -1,5 +1,6 @@
 package com.inp.msa.inpmsaauth.config;
 
+import com.inp.msa.inpmsaauth.util.SecurityUtil;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -12,7 +13,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Role;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -55,7 +55,6 @@ public class SecurityAuthorizationServerConfig {
                 .getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 .oidc(Customizer.withDefaults());
         http
-                .csrf(AbstractHttpConfigurer::disable)
                 .oauth2ResourceServer((resourceServer) -> resourceServer
                         .jwt(Customizer.withDefaults()));
 
@@ -70,7 +69,6 @@ public class SecurityAuthorizationServerConfig {
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .redirectUri("http://127.0.0.1:8080/login/oauth2/code/login-client")
                 .redirectUri("http://127.0.0.1:8080/authorized")
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
@@ -96,7 +94,7 @@ public class SecurityAuthorizationServerConfig {
 
         RSAKey rsaKey = new RSAKey.Builder(publicKey)
                 .privateKey(privateKey)
-                .keyID(UUID.randomUUID().toString())
+                .keyID(SecurityUtil.generateUUID())
                 .build();
 
         JWKSet jwkSet = new JWKSet(rsaKey);
@@ -110,7 +108,7 @@ public class SecurityAuthorizationServerConfig {
 
     @Bean
     public AuthorizationServerSettings providerSettings() {
-        return AuthorizationServerSettings.builder().issuer("http://localhost:8080/inpmsaauth").build();
+        return AuthorizationServerSettings.builder().issuer("http://localhost:8080").build();
     }
 
     @Bean
@@ -126,5 +124,4 @@ public class SecurityAuthorizationServerConfig {
         }
         return keyPair;
     }
-
 }

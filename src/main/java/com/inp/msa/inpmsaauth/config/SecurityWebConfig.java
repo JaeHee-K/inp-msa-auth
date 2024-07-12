@@ -32,13 +32,12 @@ public class SecurityWebConfig {
 
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/templates/**").permitAll()
-                        .requestMatchers("/login", "/register", "/oauth2/**", "authorize/**").permitAll()
+                        .requestMatchers("/resources/**").permitAll()
+                        .requestMatchers("login/**", "register", "oauth2/**", "authorized/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(formLogin -> formLogin
                         .loginPage("/login")
-                        .defaultSuccessUrl("/", true)
                         .permitAll()
                 )
                 .logout(logout -> logout
@@ -46,6 +45,8 @@ public class SecurityWebConfig {
                         .logoutSuccessUrl("/login")
                         .permitAll()
                 )
+                .sessionManagement(sessionManagerment -> sessionManagerment
+                        .sessionFixation().migrateSession())
                 .userDetailsService(customUserDetailsService);
 
         return http.build();

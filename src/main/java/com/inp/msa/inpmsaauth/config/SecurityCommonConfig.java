@@ -13,7 +13,7 @@ public class SecurityCommonConfig {
     public static void configureCommonSettings(HttpSecurity http) throws Exception {
         http
                 .exceptionHandling(exceptions ->
-                        exceptions.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
+                                           exceptions.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
                 )
                 .csrf(AbstractHttpConfigurer::disable);
     }

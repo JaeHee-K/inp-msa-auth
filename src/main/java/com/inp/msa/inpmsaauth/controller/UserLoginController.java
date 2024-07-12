@@ -12,4 +12,12 @@ public class UserLoginController {
     public String login() {
         return "login";
     }
+
+    /**
+     * 임시 테스트용
+     */
+    @GetMapping("/authorized")
+    public String oauth2Login() {
+        return "authorize";
+    }
 }
