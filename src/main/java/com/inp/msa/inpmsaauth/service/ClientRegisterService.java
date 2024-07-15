@@ -48,6 +48,11 @@ public class ClientRegisterService {
                 .tokenSettings(TokenSettings.builder().settings(settings -> settings.putAll(request.getTokenSettings())).build())
                 .build();
 
+        // To Do Delete
+        System.out.println("#############################");
+        System.out.println("rawClientSecret : " + rawClientSecret);
+        System.out.println("#############################");
+
         registeredClientRepository.save(registeredClient);
     }
 }

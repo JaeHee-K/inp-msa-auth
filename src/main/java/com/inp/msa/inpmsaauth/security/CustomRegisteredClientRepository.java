@@ -12,11 +12,13 @@ import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.settings.ConfigurationSettingNames;
 import org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat;
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -49,7 +51,9 @@ public class CustomRegisteredClientRepository implements RegisteredClientReposit
         client.setRedirectUris(serialize(registeredClient.getRedirectUris()));
         client.setScopes(serialize(registeredClient.getScopes()));
         client.setClientSettings(serialize(registeredClient.getClientSettings().getSettings()));
-        client.setTokenSettings(serialize(registeredClient.getTokenSettings().getSettings()));
+
+        // Token Setting은 요청 값을 우선시 하여 default값 변경(Others default)
+        client.setTokenSettings(serialize(convertToStandardTokenSettings(registeredClient)));
 
         oauthClientRepository.save(client);
     }
@@ -98,6 +102,9 @@ public class CustomRegisteredClientRepository implements RegisteredClientReposit
         }
     }
 
+    /**
+     * 일부 Map내 String 요소 Convert에러 나는 항목에 대해서 if-else를 통해 변한
+     */
     private TokenSettings mapToTokenSettings(String tokenSettingsJson) {
         try {
             Map<String, Object> tokenSettingsMap = deserializeToMap(tokenSettingsJson, String.class, Object.class);
@@ -147,20 +154,62 @@ public class CustomRegisteredClientRepository implements RegisteredClientReposit
     }
 
     /**
-     * Token Key:Value Validation
+     * Token Key, Value Validation
      */
     private boolean isDurationKey(String key) {
-        return key.equals("settings.token.authorization-code-time-to-live") ||
-                key.equals("settings.token.access-token-time-to-live") ||
-                key.equals("settings.token.refresh-token-time-to-live") ||
-                key.equals("settings.token.device-code-time-to-live");
+        return key.equals(ConfigurationSettingNames.Token.AUTHORIZATION_CODE_TIME_TO_LIVE) ||
+                key.equals(ConfigurationSettingNames.Token.ACCESS_TOKEN_TIME_TO_LIVE) ||
+                key.equals(ConfigurationSettingNames.Token.REFRESH_TOKEN_TIME_TO_LIVE) ||
+                key.equals(ConfigurationSettingNames.Token.DEVICE_CODE_TIME_TO_LIVE);
     }
 
     private boolean isOAuth2TokenFormatKey(String key) {
-        return key.equals("settings.token.access-token-format");
+        return key.equals(ConfigurationSettingNames.Token.ACCESS_TOKEN_FORMAT);
     }
 
     private boolean isSignatureAlgorithmKey(String key) {
-        return key.equals("settings.token.id-token-signature-algorithm");
+        return key.equals(ConfigurationSettingNames.Token.ID_TOKEN_SIGNATURE_ALGORITHM);
+    }
+
+    /**
+     * Token Settings Default Options Validation
+     */
+    private Map<String, Object> convertToStandardTokenSettings(RegisteredClient registeredClient) {
+            Map<String, Object> tokenSettingsMap = new HashMap<>(registeredClient.getTokenSettings().getSettings());
+
+            if (tokenSettingsMap.containsKey("authorizationCodeTimeToLive")) {
+                tokenSettingsMap.put(ConfigurationSettingNames.Token.AUTHORIZATION_CODE_TIME_TO_LIVE, tokenSettingsMap.get("authorizationCodeTimeToLive"));
+                tokenSettingsMap.remove("authorizationCodeTimeToLive");
+            }
+            if (tokenSettingsMap.containsKey("accessTokenTimeToLive")) {
+                tokenSettingsMap.put(ConfigurationSettingNames.Token.ACCESS_TOKEN_TIME_TO_LIVE, tokenSettingsMap.get("accessTokenTimeToLive"));
+                tokenSettingsMap.remove("accessTokenTimeToLive");
+            }
+            if (tokenSettingsMap.containsKey("accessTokenFormat")) {
+                tokenSettingsMap.put(ConfigurationSettingNames.Token.ACCESS_TOKEN_FORMAT, tokenSettingsMap.get("accessTokenFormat"));
+                tokenSettingsMap.remove("accessTokenFormat");
+            }
+            if (tokenSettingsMap.containsKey("deviceCodeTimeToLive")) {
+                tokenSettingsMap.put(ConfigurationSettingNames.Token.DEVICE_CODE_TIME_TO_LIVE, tokenSettingsMap.get("deviceCodeTimeToLive"));
+                tokenSettingsMap.remove("deviceCodeTimeToLive");
+            }
+            if (tokenSettingsMap.containsKey("reuseRefreshTokens")) {
+                tokenSettingsMap.put(ConfigurationSettingNames.Token.REUSE_REFRESH_TOKENS, tokenSettingsMap.get("reuseRefreshTokens"));
+                tokenSettingsMap.remove("reuseRefreshTokens");
+            }
+            if (tokenSettingsMap.containsKey("refreshTokenTimeToLive")) {
+                tokenSettingsMap.put(ConfigurationSettingNames.Token.REFRESH_TOKEN_TIME_TO_LIVE, tokenSettingsMap.get("refreshTokenTimeToLive"));
+                tokenSettingsMap.remove("refreshTokenTimeToLive");
+            }
+            if (tokenSettingsMap.containsKey("idTokenSignatureAlgorithm")) {
+                tokenSettingsMap.put(ConfigurationSettingNames.Token.ID_TOKEN_SIGNATURE_ALGORITHM, tokenSettingsMap.get("idTokenSignatureAlgorithm"));
+                tokenSettingsMap.remove("idTokenSignatureAlgorithm");
+            }
+            if (tokenSettingsMap.containsKey("x509CertificateBoundAccessTokens")) {
+                tokenSettingsMap.put(ConfigurationSettingNames.Token.X509_CERTIFICATE_BOUND_ACCESS_TOKENS, tokenSettingsMap.get("x509CertificateBoundAccessTokens"));
+                tokenSettingsMap.remove("x509CertificateBoundAccessTokens");
+            }
+
+        return tokenSettingsMap;
     }
 }
