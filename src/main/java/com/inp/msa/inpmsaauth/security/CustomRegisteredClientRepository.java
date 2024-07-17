@@ -38,6 +38,9 @@ public class CustomRegisteredClientRepository implements RegisteredClientReposit
     private final OauthClientRepository oauthClientRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * authorization_code GrantType 대상 Client Register 로직
+     */
     @Override
     public void save(RegisteredClient registeredClient) {
         OauthClient client = new OauthClient();
@@ -50,13 +53,41 @@ public class CustomRegisteredClientRepository implements RegisteredClientReposit
                 .map(AuthorizationGrantType::getValue).collect(Collectors.toSet())));
         client.setRedirectUris(serialize(registeredClient.getRedirectUris()));
         client.setScopes(serialize(registeredClient.getScopes()));
-        client.setClientSettings(serialize(registeredClient.getClientSettings().getSettings()));
+
+        // Client Setting은 요청 값을 우선시 하여 default값 변경(Others default)
+        client.setClientSettings(serialize(convertToStandardClientSettings(registeredClient)));
 
         // Token Setting은 요청 값을 우선시 하여 default값 변경(Others default)
         client.setTokenSettings(serialize(convertToStandardTokenSettings(registeredClient)));
 
         oauthClientRepository.save(client);
     }
+
+    /**
+     * client_credential GrantType 대상 Client Register 로직
+     * 만약, TokenSetting에 Refresh 설정이 들어간다고 하더라도 적용이 되지 않기 때문에 무방함
+     * authorization_code와 차이점은 redirect_uri 설정 유무
+     */
+    public void saveClientCredentialsClient(RegisteredClient registeredClient) {
+        OauthClient client = new OauthClient();
+        client.setClientId(registeredClient.getClientId());
+        client.setClientName(registeredClient.getClientName());
+        client.setClientSecret(registeredClient.getClientSecret());
+        client.setClientAuthenticationMethods(serialize(registeredClient.getClientAuthenticationMethods().stream()
+                                                                .map(ClientAuthenticationMethod::getValue).collect(Collectors.toSet())));
+        client.setAuthorizationGrantTypes(serialize(registeredClient.getAuthorizationGrantTypes().stream()
+                                                            .map(AuthorizationGrantType::getValue).collect(Collectors.toSet())));
+        client.setScopes(serialize(registeredClient.getScopes()));
+
+        // Client Setting은 요청 값을 우선시 하여 default값 변경(Others default)
+        client.setClientSettings(serialize(convertToStandardClientSettings(registeredClient)));
+
+        // Token Setting은 요청 값을 우선시 하여 default값 변경(Others default)
+        client.setTokenSettings(serialize(convertToStandardTokenSettings(registeredClient)));
+
+        oauthClientRepository.save(client);
+    }
+
 
     @Override
     public RegisteredClient findById(String id) {
@@ -169,6 +200,24 @@ public class CustomRegisteredClientRepository implements RegisteredClientReposit
 
     private boolean isSignatureAlgorithmKey(String key) {
         return key.equals(ConfigurationSettingNames.Token.ID_TOKEN_SIGNATURE_ALGORITHM);
+    }
+
+    /**
+     * Client Settings Default Options Validation
+     */
+    private Map<String, Object> convertToStandardClientSettings(RegisteredClient registeredClient) {
+        Map<String, Object> clientSettingsMap = new HashMap<>(registeredClient.getClientSettings().getSettings());
+
+        if (clientSettingsMap.containsKey("requireProofKey")) {
+            clientSettingsMap.put(ConfigurationSettingNames.Client.REQUIRE_PROOF_KEY, clientSettingsMap.get("requireProofKey"));
+            clientSettingsMap.remove("requireProofKey");
+        }
+        if (clientSettingsMap.containsKey("requireAuthorizationConsent")) {
+            clientSettingsMap.put(ConfigurationSettingNames.Client.REQUIRE_AUTHORIZATION_CONSENT, clientSettingsMap.get("requireAuthorizationConsent"));
+            clientSettingsMap.remove("requireAuthorizationConsent");
+        }
+
+        return clientSettingsMap;
     }
 
     /**
