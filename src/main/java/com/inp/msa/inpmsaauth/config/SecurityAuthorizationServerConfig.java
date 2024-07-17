@@ -1,5 +1,6 @@
 package com.inp.msa.inpmsaauth.config;
 
+import com.inp.msa.inpmsaauth.util.LoggingFilter;
 import com.inp.msa.inpmsaauth.util.SecurityUtil;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -20,6 +21,7 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -44,6 +46,7 @@ public class SecurityAuthorizationServerConfig {
         SecurityCommonConfig.configureCommonSettings(http);
 
         http
+                .addFilterBefore(new LoggingFilter(), UsernamePasswordAuthenticationFilter.class) // Spring Security 필터 체인의 가장 앞에 설정
                 .getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 .oidc(Customizer.withDefaults());
         http
