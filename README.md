@@ -269,7 +269,37 @@ DBeaver
 ```
 <br/>
 
-### 8. Revoke Token
+### 8. Refresh Token
+**Endpoint:** `POST /oauth2/token`
+
+**Description:** Refresh the token.
+
+**Request Headers:**
+- `Content-Type: application/x-www-form-urlencoded`
+- `Authorization: Basic {clientId:clientSecret base64 encoding}`
+
+**Request Body:**
+```json
+{
+  "grant_type": "refresh_token",
+  "refresh_token": "{refresh_token}"
+}
+```
+
+**Response:**
+```json
+{
+    "access_token": "{access_token}",
+    "refresh_token": "{refresh_token}",
+    "scope": "openid profile email",
+    "id_token": "{id_token}",
+    "token_type": "Bearer",
+    "expires_in": 3599
+}
+```
+<br/>
+
+### 9. Revoke Token
 **Endpoint:** `POST /oauth2/revoke`
 
 **Description:** Revoke the token.
@@ -294,7 +324,7 @@ DBeaver
 ```
 <br/>
 
-### 9. User info
+### 10. User info
 **Endpoint:** `GET /userinfo`
 
 **Description:** Check logged in user information.
