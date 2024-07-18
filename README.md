@@ -370,18 +370,6 @@ Some endpoints may require authentication. Include the following header in your 
 
 
 
-
-## 📁 Table DDL
-schema는 x입니다  
-
-- **[Member]**  
->x
-  
-
-- **[storage]**  
->x
-
-
 <br/>  
 
 ## 📒 Note
