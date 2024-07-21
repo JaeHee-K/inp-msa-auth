@@ -25,6 +25,9 @@ public class OauthAccessToken {
     @Column(name = "principal_name")
     private String principalName;
 
+    @Column(name = "grant_type")
+    private String grantType;
+
     @Column(name = "scope")
     private String scope;
 
@@ -50,6 +53,6 @@ public class OauthAccessToken {
     private LocalDateTime createDate;
 
     @Column(name = "status")
-    private String status;
+    private String status = "ACTIVE";
 
 }

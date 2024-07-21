@@ -1,5 +1,7 @@
 package com.inp.msa.inpmsaauth.config;
 
+import com.inp.msa.inpmsaauth.security.CustomOAuth2AuthorizationService;
+import com.inp.msa.inpmsaauth.security.CustomRegisteredClientRepository;
 import com.inp.msa.inpmsaauth.util.LoggingFilter;
 import com.inp.msa.inpmsaauth.util.SecurityUtil;
 import com.nimbusds.jose.jwk.JWKSet;
@@ -38,6 +40,8 @@ public class SecurityAuthorizationServerConfig {
      */
 
     private final PasswordEncoder passwordEncoder;
+    private final CustomOAuth2AuthorizationService customOAuth2AuthorizationService;
+    private final CustomRegisteredClientRepository customRegisteredClientRepository;
 
     @Bean
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -56,6 +60,19 @@ public class SecurityAuthorizationServerConfig {
         return http.build();
     }
 
+//    @Bean
+//    public OAuth2AuthorizationService authorizationService() {
+//        return customOAuth2AuthorizationService;
+//    }
+
+//    @Bean
+//    public RegisteredClientRepository registeredClientRepository() {
+//        return customRegisteredClientRepository;
+//    }
+
+    /**
+     * JWK, Key Setting
+     */
     @Bean
     public JWKSource<SecurityContext> jwkSource(KeyPair keyPair) {
         RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();

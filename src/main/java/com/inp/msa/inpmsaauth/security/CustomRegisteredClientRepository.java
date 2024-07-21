@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.type.MapType;
 import com.inp.msa.inpmsaauth.domain.OauthClient;
 import com.inp.msa.inpmsaauth.repository.OauthClientRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
+@Primary
 public class CustomRegisteredClientRepository implements RegisteredClientRepository {
 
     /**
