@@ -1,8 +1,10 @@
 package com.inp.msa.inpmsaauth.security;
 
 import com.inp.msa.inpmsaauth.domain.OauthAccessToken;
+import com.inp.msa.inpmsaauth.domain.OauthAuthorizationCode;
 import com.inp.msa.inpmsaauth.domain.OauthTokenHistory;
 import com.inp.msa.inpmsaauth.repository.OauthAccessTokenRepository;
+import com.inp.msa.inpmsaauth.repository.OauthAuthorizationCodeRepository;
 import com.inp.msa.inpmsaauth.repository.OauthTokenHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
@@ -10,14 +12,18 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -33,39 +39,62 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
 
     private final OauthAccessTokenRepository oauthAccessTokenRepository;
     private final OauthTokenHistoryRepository oauthTokenHistoryRepository;
-    private final CustomRegisteredClientRepository customRegisteredClientRepository; ;
+    private final CustomRegisteredClientRepository customRegisteredClientRepository;
+    private final OauthAuthorizationCodeRepository oauthAuthorizationCodeRepository;
 
     @Override
     @Transactional
     public void save(OAuth2Authorization authorization) {
-        // Check if the authorization is for an access token or refresh token
-        if (authorization.getAccessToken() != null) {
+        if (AuthorizationGrantType.AUTHORIZATION_CODE.equals(authorization.getAuthorizationGrantType())) {
+            saveAuthorizationCode(authorization);
+        } else {
             saveAccessToken(authorization);
         }
+
         saveTokenHistory(authorization, "SAVE");
     }
 
     @Override
     @Transactional
     public void remove(OAuth2Authorization authorization) {
-        deactivateAccessToken(authorization);
+        if (AuthorizationGrantType.AUTHORIZATION_CODE.equals(authorization.getAuthorizationGrantType())) {
+            removeAuthorizationCode(authorization);
+        } else {
+            deactivateAccessToken(authorization);
+        }
+
         saveTokenHistory(authorization, "REMOVE");
     }
 
     @Override
     public OAuth2Authorization findById(String id) {
         Optional<OauthAccessToken> optionalOauthAccessToken = oauthAccessTokenRepository.findById(id);
-        return optionalOauthAccessToken.map(this::toOAuth2Authorization).orElse(null);
+        if (optionalOauthAccessToken.isPresent()) {
+            return optionalOauthAccessToken.map(this::toOAuth2Authorization).orElse(null);
+        }
+
+        Optional<OauthAuthorizationCode> optionalOauthAuthorizationCode = oauthAuthorizationCodeRepository.findById(id);
+        return optionalOauthAuthorizationCode.map(this::toOAuth2Authorization).orElse(null);
     }
 
     @Override
     public OAuth2Authorization findByToken(String token, OAuth2TokenType tokenType) {
-        Optional<OauthAccessToken> optionalOauthAccessToken = tokenType == null || OAuth2TokenType.ACCESS_TOKEN.equals(tokenType)
-                ? oauthAccessTokenRepository.findByAccessTokenValue(token)
-                : oauthAccessTokenRepository.findByRefreshTokenValue(token);
-        return optionalOauthAccessToken.map(this::toOAuth2Authorization).orElse(null);
+        if (tokenType == null || OAuth2TokenType.ACCESS_TOKEN.equals(tokenType)) {
+            Optional<OauthAccessToken> optionalOauthAccessToken = oauthAccessTokenRepository.findByAccessTokenValue(token);
+            return optionalOauthAccessToken.map(this::toOAuth2Authorization).orElse(null);
+        } else if (OAuth2TokenType.REFRESH_TOKEN.equals(tokenType)) {
+            Optional<OauthAccessToken> optionalOauthAccessToken = oauthAccessTokenRepository.findByRefreshTokenValue(token);
+            return optionalOauthAccessToken.map(this::toOAuth2Authorization).orElse(null);
+        } else if (OAuth2AuthorizationCode.class.getName().equals(tokenType.getValue())) {
+            Optional<OauthAuthorizationCode> optionalOauthAuthorizationCode = oauthAuthorizationCodeRepository.findByCodeValue(token);
+            return optionalOauthAuthorizationCode.map(this::toOAuth2Authorization).orElse(null);
+        }
+        return null;
     }
 
+    /*
+    client credential 용도의 toOAuth2Authorization
+     */
     private OAuth2Authorization toOAuth2Authorization(OauthAccessToken oauthAccessToken) {
         RegisteredClient registeredClient = customRegisteredClientRepository.findById(oauthAccessToken.getClientId());
 
@@ -77,7 +106,13 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
                                              oauthAccessToken.getAccessTokenValue(),
                                              oauthAccessToken.getAccessTokenIssuedAt() != null ? oauthAccessToken.getAccessTokenIssuedAt().atZone(ZoneId.systemDefault()).toInstant() : null,
                                              oauthAccessToken.getAccessTokenExpiresAt() != null ? oauthAccessToken.getAccessTokenExpiresAt().atZone(ZoneId.systemDefault()).toInstant() : null),
-                       metadata -> metadata.put(OAuth2Authorization.Token.CLAIMS_METADATA_NAME, oauthAccessToken.getScope().split(",")));
+                       metadata -> {
+                            if (oauthAccessToken.getScope() != null) {
+                                Map<String, Object> claims = new HashMap<>();
+                                claims.put("scope", String.join(" ", oauthAccessToken.getScope().split(",")));
+                                metadata.put(OAuth2Authorization.Token.CLAIMS_METADATA_NAME, claims);
+                            }
+                       });
 
         if (oauthAccessToken.getRefreshTokenValue() != null) {
             authorizationBuilder.token(new OAuth2RefreshToken(
@@ -86,6 +121,25 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
                     oauthAccessToken.getRefreshTokenExpiresAt() != null ? oauthAccessToken.getRefreshTokenExpiresAt().atZone(ZoneId.systemDefault()).toInstant() : null
             ));
         }
+
+        return authorizationBuilder.build();
+    }
+
+    /*
+    authorization code 용도의 toOAuth2Authorization
+     */
+    private OAuth2Authorization toOAuth2Authorization(OauthAuthorizationCode oauthAuthorizationCode) {
+        RegisteredClient registeredClient = customRegisteredClientRepository.findById(oauthAuthorizationCode.getClientId());
+
+        OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.withRegisteredClient(registeredClient)
+                .id(oauthAuthorizationCode.getCodeId())
+                .principalName(oauthAuthorizationCode.getPrincipalName())
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .token(new OAuth2AuthorizationCode(
+                        oauthAuthorizationCode.getCodeValue(),
+                        oauthAuthorizationCode.getIssuedAt() != null ? oauthAuthorizationCode.getIssuedAt().atZone(ZoneId.systemDefault()).toInstant() : null,
+                        oauthAuthorizationCode.getExpiresAt() != null ? oauthAuthorizationCode.getExpiresAt().atZone(ZoneId.systemDefault()).toInstant() : null
+                ));
 
         return authorizationBuilder.build();
     }
@@ -127,11 +181,40 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
         oauthAccessTokenRepository.save(accessToken);
     }
 
+    private void saveAuthorizationCode(OAuth2Authorization authorization) {
+        RegisteredClient registeredClient = customRegisteredClientRepository.findById(authorization.getRegisteredClientId());
+
+        OAuth2Authorization.Token<?> authorizationCodeToken = authorization.getToken(OAuth2AuthorizationCode.class);
+        if (authorizationCodeToken == null) {
+            throw new IllegalArgumentException("Authorization code not found in authorization");
+        }
+
+        OauthAuthorizationCode code = new OauthAuthorizationCode();
+        code.setCodeId(authorization.getId());
+        code.setCodeValue(authorizationCodeToken.getToken().getTokenValue());
+        code.setClientId(authorization.getRegisteredClientId());
+        code.setPrincipalName(authorization.getPrincipalName());
+        code.setIssuedAt(LocalDateTime.ofInstant(authorizationCodeToken.getToken().getIssuedAt(), ZoneId.systemDefault()));
+
+        Duration authorizationCodeTimeToLive = registeredClient.getTokenSettings().getAuthorizationCodeTimeToLive();
+        if (authorizationCodeTimeToLive != null) {
+            code.setExpiresAt(LocalDateTime.ofInstant(authorizationCodeToken.getToken().getIssuedAt().plus(authorizationCodeTimeToLive), ZoneId.systemDefault()));
+        }
+
+        oauthAuthorizationCodeRepository.save(code);
+    }
+
     private void deactivateAccessToken(OAuth2Authorization authorization) {
         OauthAccessToken accessToken = oauthAccessTokenRepository.findById(authorization.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Token not found"));
         accessToken.setStatus("INACTIVE");
         oauthAccessTokenRepository.save(accessToken);
+    }
+
+    private void removeAuthorizationCode(OAuth2Authorization authorization) {
+        OauthAuthorizationCode code = oauthAuthorizationCodeRepository.findById(authorization.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Authorization code not found"));
+        oauthAuthorizationCodeRepository.delete(code);
     }
 
     private void saveTokenHistory(OAuth2Authorization authorization, String action) {
