@@ -77,14 +77,23 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
         return optionalOauthAuthorizationCode.map(this::toOAuth2Authorization).orElse(null);
     }
 
+    /*
+    token introspect, revoke 등 조회가 필요할 때 사용
+     */
     @Override
     public OAuth2Authorization findByToken(String token, OAuth2TokenType tokenType) {
         if (tokenType == null || OAuth2TokenType.ACCESS_TOKEN.equals(tokenType)) {
             Optional<OauthAccessToken> optionalOauthAccessToken = oauthAccessTokenRepository.findByAccessTokenValue(token);
-            return optionalOauthAccessToken.map(this::toOAuth2Authorization).orElse(null);
+            return optionalOauthAccessToken
+                    .filter(accessToken -> !"INACTIVE".equals(accessToken.getStatus()))
+                    .map(this::toOAuth2Authorization)
+                    .orElse(null);
         } else if (OAuth2TokenType.REFRESH_TOKEN.equals(tokenType)) {
             Optional<OauthAccessToken> optionalOauthAccessToken = oauthAccessTokenRepository.findByRefreshTokenValue(token);
-            return optionalOauthAccessToken.map(this::toOAuth2Authorization).orElse(null);
+            return optionalOauthAccessToken
+                    .filter(refreshToken -> !"INACTIVE".equals(refreshToken.getStatus()))
+                    .map(this::toOAuth2Authorization)
+                    .orElse(null);
         } else if (OAuth2AuthorizationCode.class.getName().equals(tokenType.getValue())) {
             Optional<OauthAuthorizationCode> optionalOauthAuthorizationCode = oauthAuthorizationCodeRepository.findByCodeValue(token);
             return optionalOauthAuthorizationCode.map(this::toOAuth2Authorization).orElse(null);
@@ -96,6 +105,10 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
     client credential 용도의 toOAuth2Authorization
      */
     private OAuth2Authorization toOAuth2Authorization(OauthAccessToken oauthAccessToken) {
+        if ("INACTIVE".equals(oauthAccessToken.getStatus())) {
+            return null;
+        }
+
         RegisteredClient registeredClient = customRegisteredClientRepository.findById(oauthAccessToken.getClientId());
 
         OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.withRegisteredClient(registeredClient)
