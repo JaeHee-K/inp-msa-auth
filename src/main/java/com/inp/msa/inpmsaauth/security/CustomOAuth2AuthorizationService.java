@@ -6,6 +6,7 @@ import com.inp.msa.inpmsaauth.domain.OauthTokenHistory;
 import com.inp.msa.inpmsaauth.repository.OauthAccessTokenRepository;
 import com.inp.msa.inpmsaauth.repository.OauthAuthorizationCodeRepository;
 import com.inp.msa.inpmsaauth.repository.OauthTokenHistoryRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -18,6 +19,8 @@ import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -45,6 +48,12 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
     @Override
     @Transactional
     public void save(OAuth2Authorization authorization) {
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+        if (request != null && "/oauth2/revoke".equals(request.getRequestURI())) {
+            remove(authorization);
+            return;
+        }
+
         if (AuthorizationGrantType.AUTHORIZATION_CODE.equals(authorization.getAuthorizationGrantType())) {
             saveAuthorizationCode(authorization);
         } else {
