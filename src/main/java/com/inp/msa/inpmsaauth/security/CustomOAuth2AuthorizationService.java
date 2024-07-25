@@ -9,9 +9,12 @@ import com.inp.msa.inpmsaauth.repository.OauthTokenHistoryRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
@@ -22,12 +25,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.security.Principal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -55,7 +61,11 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
         }
 
         if (AuthorizationGrantType.AUTHORIZATION_CODE.equals(authorization.getAuthorizationGrantType())) {
-            saveAuthorizationCode(authorization);
+            if (authorization.getAccessToken() == null) {
+                saveAuthorizationCode(authorization);
+            } else {
+                saveAccessToken(authorization);
+            }
         } else {
             saveAccessToken(authorization);
         }
@@ -103,7 +113,7 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
                     .filter(refreshToken -> !"INACTIVE".equals(refreshToken.getStatus()))
                     .map(this::toOAuth2Authorization)
                     .orElse(null);
-        } else if (OAuth2AuthorizationCode.class.getName().equals(tokenType.getValue())) {
+        } else if ("code".equals(tokenType.getValue())) {
             Optional<OauthAuthorizationCode> optionalOauthAuthorizationCode = oauthAuthorizationCodeRepository.findByCodeValue(token);
             return optionalOauthAuthorizationCode.map(this::toOAuth2Authorization).orElse(null);
         }
@@ -153,6 +163,26 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
     private OAuth2Authorization toOAuth2Authorization(OauthAuthorizationCode oauthAuthorizationCode) {
         RegisteredClient registeredClient = customRegisteredClientRepository.findById(oauthAuthorizationCode.getClientId());
 
+        // authorizedScopes Setting
+        Set<String> scopes = Set.of();
+        if (oauthAuthorizationCode.getScopes() != null && !oauthAuthorizationCode.getScopes().isEmpty()) {
+            scopes = Set.of(oauthAuthorizationCode.getScopes().split(","));
+        }
+
+        // authorizationRequest Setting
+        OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.authorizationCode()
+                .clientId(oauthAuthorizationCode.getClientId())
+                .authorizationUri(oauthAuthorizationCode.getAuthorizationUri())
+                .redirectUri(oauthAuthorizationCode.getRedirectUri())
+                .scopes(scopes)
+                .state(oauthAuthorizationCode.getState())
+                .additionalParameters(Map.of())
+                .build();
+
+        // Authentication 객체 생성
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                oauthAuthorizationCode.getPrincipalName(), null, Collections.emptyList());
+
         OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.withRegisteredClient(registeredClient)
                 .id(oauthAuthorizationCode.getCodeId())
                 .principalName(oauthAuthorizationCode.getPrincipalName())
@@ -161,7 +191,11 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
                         oauthAuthorizationCode.getCodeValue(),
                         oauthAuthorizationCode.getIssuedAt() != null ? oauthAuthorizationCode.getIssuedAt().atZone(ZoneId.systemDefault()).toInstant() : null,
                         oauthAuthorizationCode.getExpiresAt() != null ? oauthAuthorizationCode.getExpiresAt().atZone(ZoneId.systemDefault()).toInstant() : null
-                ));
+                ))
+                .attribute(OAuth2AuthorizationRequest.class.getName(), authorizationRequest)
+                .attribute(Principal.class.getName(), authentication);
+
+        authorizationBuilder.attribute(OAuth2AuthorizationRequest.class.getName(),authorizationRequest);
 
         return authorizationBuilder.build();
     }
@@ -216,6 +250,15 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
         code.setCodeValue(authorizationCodeToken.getToken().getTokenValue());
         code.setClientId(authorization.getRegisteredClientId());
         code.setPrincipalName(authorization.getPrincipalName());
+        code.setScopes(String.join(",", authorization.getAuthorizedScopes()));
+
+        OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
+        if (authorizationRequest != null) {
+            code.setAuthorizationUri(authorizationRequest.getAuthorizationUri());
+            code.setRedirectUri(authorizationRequest.getRedirectUri());
+            code.setState(authorizationRequest.getState());
+        }
+
         code.setIssuedAt(LocalDateTime.ofInstant(authorizationCodeToken.getToken().getIssuedAt(), ZoneId.systemDefault()));
 
         Duration authorizationCodeTimeToLive = registeredClient.getTokenSettings().getAuthorizationCodeTimeToLive();

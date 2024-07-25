@@ -28,6 +28,18 @@ public class OauthAuthorizationCode {
     @Column(name = "principal_name")
     private String principalName;
 
+    @Column(name = "scopes")
+    private String scopes;
+
+    @Column(name = "authorization_uri")
+    private String authorizationUri;
+
+    @Column(name = "redirect_uri")
+    private String redirectUri;
+
+    @Column(name = "state")
+    private String state;
+
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
 
