@@ -63,8 +63,11 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
         if (AuthorizationGrantType.AUTHORIZATION_CODE.equals(authorization.getAuthorizationGrantType())) {
             if (authorization.getAccessToken() == null) {
                 saveAuthorizationCode(authorization);
+                saveTokenHistory(authorization, "CODE");
+                return;
             } else {
                 saveAccessToken(authorization);
+                removeAuthorizationCode(authorization);
             }
         } else {
             saveAccessToken(authorization);
@@ -76,12 +79,7 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
     @Override
     @Transactional
     public void remove(OAuth2Authorization authorization) {
-        if (AuthorizationGrantType.AUTHORIZATION_CODE.equals(authorization.getAuthorizationGrantType())) {
-            removeAuthorizationCode(authorization);
-        } else {
-            deactivateAccessToken(authorization);
-        }
-
+        deactivateAccessToken(authorization);
         saveTokenHistory(authorization, "REMOVE");
     }
 
