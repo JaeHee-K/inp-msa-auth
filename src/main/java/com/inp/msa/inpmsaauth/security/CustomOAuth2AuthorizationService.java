@@ -113,7 +113,9 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
                     .orElse(null);
         } else if ("code".equals(tokenType.getValue())) {
             Optional<OauthAuthorizationCode> optionalOauthAuthorizationCode = oauthAuthorizationCodeRepository.findByCodeValue(token);
-            return optionalOauthAuthorizationCode.map(this::toOAuth2Authorization).orElse(null);
+            return optionalOauthAuthorizationCode
+                    .map(this::toOAuth2Authorization)
+                    .orElse(null);
         }
         return null;
     }
@@ -185,6 +187,7 @@ public class CustomOAuth2AuthorizationService implements OAuth2AuthorizationServ
                 .id(oauthAuthorizationCode.getCodeId())
                 .principalName(oauthAuthorizationCode.getPrincipalName())
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizedScopes(scopes)
                 .token(new OAuth2AuthorizationCode(
                         oauthAuthorizationCode.getCodeValue(),
                         oauthAuthorizationCode.getIssuedAt() != null ? oauthAuthorizationCode.getIssuedAt().atZone(ZoneId.systemDefault()).toInstant() : null,
